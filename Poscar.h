@@ -9,11 +9,9 @@
 #define POSCAR_h
 
 #include <iostream>
-#include <fstream>
-#include <stdio.h>
 #include <string>
 #include <vector>
-#include <sstream>      //  used for  stringstream
+#include <iomanip>
 
 #include "VectT.h"
 #include "Atom.h"
@@ -24,11 +22,13 @@ class Poscar
 private:
    int chemType;
    void latticeVectorsToCartesian(float scale);
+   string getCoordType();
+   void getPoscarFromFile(string fileName);
+   int getChemTypeForAnAtom(int i);
+   VectT<float> getCartFromFract(VectT<float> fractional); // To Cartesian coords.
    
-   // change to cartesian coordiantes ( using vfA, vfC, vfC in CARTESIANS !! )
-   VectT<float> getCartesianFromFractional(VectT<float> fractional);
-   
-   int getTypeChem(int cont, VectT<int> vComposition);
+   template <class T>
+   VectT<T> getChemPerAtom(VectT<T> vecOfChems);
    
 public:
    string head;
@@ -36,22 +36,24 @@ public:
    VectT<float> vfA;
    VectT<float> vfB;
    VectT<float> vfC;
-   VectT<int> vComposition;
+   VectT<int> chemTypes;   // chemTypes       = [0, 1, 2], for example
+   VectT<string> chemNames;   // chemNames   = [Co Ni Ti], for example
+   VectT<int> vComposition; // vComposition  = [ 4,  2,  2], for example
+   VectT<int> chemTypesPerAtom; // = [0 0 0 0 1 1 2 2] for example
+   VectT<string> chemNamesPerAtom; // = [Co Co Co Co Ni Ni Ti Ti ] for example
    char coordinatesType;
-   vector<Atom*> pAtoms;
+   vector<Atom> atoms;
    
+   Poscar(){} // default constructor
+   Poscar(const Poscar &poscar) {*this = poscar;} // copyConstructor uses =Operator
    Poscar(string fileName) {getPoscarFromFile(fileName);}
-   void getPoscarFromFile(string fileName);
-   vector<string> getPoscarLines();
-   void convertToCartesian(float scale);
+   Poscar &operator = (const Poscar &rhs); // Asignment (=) operator
    
-   friend ostream &operator << (ostream &out, Poscar &poscar)
-   {
-      vector<string> poscarLines = poscar.getPoscarLines();
-      for (int i = 0; i < poscarLines.size(); i++)
-         out << poscarLines[i] << endl;
-      return out;
-   }
+   void convertToCartesian(float scale);
+   void setChemicals(VectT<int> chemTypes, VectT<string> chemNames);
+   
+   friend ostream &operator << (ostream &out, Poscar &poscar);
+
 };
 
 #endif /* POSCAR_h */

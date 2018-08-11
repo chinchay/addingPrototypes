@@ -35,16 +35,18 @@ private:
    string featureID;
    string tail;
    
-   string getAtomLine(int cont, Atom* pAtom);
-   
 public:
    string ID;
    VectT<float> vfA;
    VectT<float> vfB;
    VectT<float> vfC;
    VectT<int> vComposition;
-   vector<Atom*> pAtoms;
+   vector<Atom> atoms;
 
+   Cfg(){} // default constructor
+   Cfg(const Cfg &cfg) {*this = cfg;} // copy constructor uses the = operator.
+   Cfg &operator = (const Cfg &rhs); // Asignment (=) operator
+   
    // non-default constructor
    Cfg(string ID, Poscar poscar);
    
@@ -53,19 +55,10 @@ public:
    void setB(VectT<float> vfB) {this->vfA = vfB;}
    void setC(VectT<float> vfC) {this->vfA = vfC;}
    
-   void push_atom(char chemType, VectT<float> position);
-   vector<string> getCfgLines();
+//   void push_atom(char chemType, VectT<float> position);
    void getCfgFromPoscarClass(string ID, Poscar poscar);
    
-   friend ostream &operator << (ostream &out, Cfg &cfg)
-   {
-      vector<string> cfgLines = cfg.getCfgLines();
-      for (int i = 0; i < cfgLines.size(); i++)
-         out << cfgLines[i] << endl;
-      return out;
-   }
-
-   void display();
+   friend ostream &operator << (ostream &out, Cfg &cfg);
 
 };
 

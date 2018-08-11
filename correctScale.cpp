@@ -1,3 +1,9 @@
+/**************************************************************************************
+ * Source File:
+ *    correctScale
+ * Author:
+ *    Carlos Leon. MSG-BYU
+ *************************************************************************************/
 
 #include <iostream>
 #include <fstream>
@@ -13,9 +19,13 @@
 #include "Poscar.h"
 #include "Atom.h"
 #include "VectT.h"
+#include "ChemicalTypes.h"
 
 using namespace std;
 
+/**************************************************************************************
+ * countLines
+ *************************************************************************************/
 int countLines(string fileNames)
 {
    ifstream fin(fileNames.c_str());
@@ -31,8 +41,9 @@ int countLines(string fileNames)
    return i;
 }
 
-
-
+/**************************************************************************************
+ * ls2file
+ *************************************************************************************/
 void ls2file(string folderName, string fileNames)
 {
    //   cout << "we are in " << endl;
@@ -51,28 +62,39 @@ void ls2file(string folderName, string fileNames)
    system(run.c_str());
 }
 
-
-
 // volumen per atom in a BCC, FCC, HCP crystal type
+/**************************************************************************************
+ * vAtomBcc:
+ *************************************************************************************/
 float vAtomBcc(float a)
 {
    float fact = 0.5;
    return fact * pow(a,3.0);
 }
 
+/**************************************************************************************
+ * vAtomFcc
+ *************************************************************************************/
 float vAtomFcc(float a)
 {
    float fact = 0.25;
    return fact * pow(a,3.0);
 }
 
+/**************************************************************************************
+ * vAtomHcp
+ *************************************************************************************/
 float vAtomHcp(float a)
 {
    float fact = pow(2.0, 0.5) / 2.0;
    return fact * pow(a,3.0);
 }
 
-float getRequiredVol(int nCo, int nNi, int nTi)
+/**************************************************************************************
+ * getRequiredVol
+ *************************************************************************************/
+float getRequiredVol(Poscar poscar)
+//float getRequiredVol(int nCo, int nNi, int nTi)
 {
    float l_Co_bcc1 = 2.729998;
    float l_Co_fcc1 = 3.46229;
@@ -86,54 +108,101 @@ float getRequiredVol(int nCo, int nNi, int nTi)
    float l_Ti_fcc3 = 4.100774;
    float l_Ti_hcp6 = 2.914298;
    
-   float requiredVol = nCo * vAtomHcp(l_Co_hcp1)
-                       + nNi * vAtomFcc(l_Ni_fcc2)
-                       + nTi * vAtomHcp(l_Ti_hcp6);
+   int nAtoms = poscar.atoms.size();
+   int chemType;
+   float requiredVol = 0;
+   float temp;
+
+//   int nAllElements = chemTypes.size();
+//   assert(nAtoms <= nAllElements);
+
+   
+   for (int i = 0; i < nAtoms; i++)
+   {
+      chemType = poscar.atoms[i].getChemType();
+      switch (chemType)
+      {
+         case 0:
+            temp = vAtomHcp(l_Co_hcp1);
+            break;
+         case 1:
+            temp = vAtomFcc(l_Ni_fcc2);
+            break;
+         case 2:
+            temp = vAtomHcp(l_Ti_hcp6);
+            break;
+         default:
+            cout << "INTRODUCE MORE DATA!" << endl;
+            break;
+      }
+      
+      requiredVol += temp;
+   }
+   
+//   float requiredVol = nCo * vAtomHcp(l_Co_hcp1)
+//                       + nNi * vAtomFcc(l_Ni_fcc2)
+//                       + nTi * vAtomHcp(l_Ti_hcp6);
+   
    return requiredVol;
 }
 
-float getCorrectScale(Poscar myPoscar)
+/**************************************************************************************
+ * getCorrectScale
+ *************************************************************************************/
+float getCorrectScale(Poscar poscar)
 {
-   float latticeVol = myPoscar.vfA( myPoscar.vfB, myPoscar.vfC);
-   int nCo = myPoscar.vComposition[0];
-   int nNi = myPoscar.vComposition[1];
-   int nTi = myPoscar.vComposition[2];
-   
-   float requiredVol  = getRequiredVol(nCo, nNi, nTi);
+   float latticeVol = poscar.vfA( poscar.vfB, poscar.vfC);
+   float requiredVol  = getRequiredVol(poscar);
    float correctScale = pow( (requiredVol / latticeVol), 1.0/3.0 );
    return correctScale;
 }
 
-vector<string> getCfgLinesFromPoscar(string ID, Poscar myPoscar)
+/**************************************************************************************
+ * areEqual: compares to floats.
+ *************************************************************************************/
+bool areEqual(float lhs, float rhs)
 {
-   float scale = getCorrectScale(myPoscar);
-   myPoscar.convertToCartesian(scale);
+   float eps = 0.00001;
+   return ( (lhs - eps <= rhs) || (rhs <= lhs + eps) );
+}
+
+/**************************************************************************************
+ * getCfgFromPoscar:
+ *************************************************************************************/
+Cfg getCfgFromPoscar(string ID, Poscar poscar)
+{
+   float scale = getCorrectScale(poscar);
+   poscar.convertToCartesian(scale);
 
    // at the end, correctedScale must be 1.0, since everything was converted to
    // cartesian coordinates!
-   assert(getCorrectScale(myPoscar) == 1.0);
+   assert( areEqual(getCorrectScale(poscar), 1.0) );
    
-   cout << myPoscar << endl;
+   Cfg cfg(ID, poscar);
    
-   Cfg cfg(ID, myPoscar);
+   cout << poscar << endl;
    cout << cfg << endl;
-   vector<string> vlinesCfg = cfg.getCfgLines();
    
-   return vlinesCfg;
+   return cfg;
 }
 
-
+/**************************************************************************************
+ * Main:
+ *************************************************************************************/
 int main()
 {
    string fileNames = "fileNames.txt";
    vector<string> poscarLines;
    vector<string> cfgLines;
    
+   VectT<string> allElementNames;
+   allElementNames.push_back(string("Co"));
+   allElementNames.push_back(string("Ni"));
+   allElementNames.push_back(string("Ti"));
+   
    int n_ary;
-   int nCo = 0;
-   int nNi = 0;
-   int nTi = 0;
-   int nElements;
+
+   int nAtoms;
    string prototypeName;
    string ID;
    VectT<int> vComposition;
@@ -141,55 +210,60 @@ int main()
    int nLines = countLines(fileNames);
    
    ifstream fin(fileNames.c_str());
+   
+   int m = 0;
    for (int i = 0; i < nLines; i++)
    {
       getline(fin, prototypeName);
       
-      Poscar myPoscar(prototypeName);
-      vComposition = myPoscar.vComposition;
+      Poscar prototypePoscar(prototypeName);
+      VectT<float> pos = prototypePoscar.atoms[0].getPosition();
+      cout << i << endl;
+      cout << "position = " <<pos << endl;
+      
+      
+      vComposition = prototypePoscar.vComposition;
       
       n_ary = vComposition.size();
-      nCo   = vComposition[0];
-      nNi   = vComposition[1];
-      nTi   = vComposition[2];
-      nElements = nCo + nNi + nTi;
+      nAtoms = vComposition.getSumComponents();
       
-      if (nElements < 11)
+      if (nAtoms < 11)
       {
          cout << prototypeName << endl;
          ID = prototypeName;
-         cfgLines = getCfgLinesFromPoscar(ID, myPoscar);
+         
+         cout << "COMIENZO..." << endl;
+         cout << prototypePoscar << endl;
+         
+//         n_ary = 3;
+         VectT<ChemicalTypes> listChemTypes = getVectMixChemTypes(allElementNames, n_ary);
+         cout << "________________________________________________________" << endl;
+         for (int k = 0; k < listChemTypes.size(); k++)
+         {
+            cout << listChemTypes[k].types << " >>>> " << listChemTypes[k].head << endl << endl;
             
-         return 0;
+            // here COPY CONSTRUCTOR is used!!! but not uses directly the =operator !!
+            // equivalent to: mixPoscar(prototypePoscar)
+            Poscar mixPoscar = prototypePoscar;
             
-//            string newFile = string("fixed_") + prototypeName;
-//            ofstream foutNew(newFile.c_str());
-//            for (int j = 0; j < poscarLines.size(); j++)
-//            {
-//               foutNew << poscarLines[j] << endl;
-//            }
-//            foutNew.close();
-//
-//            string cfgFile = string("CFG_") + prototypeName + string(".cfg");
-//            ofstream foutCFG(cfgFile.c_str());
-//            for (int j = 0; j < cfgLines.size(); j++)
-//            {
-//               foutCFG << cfgLines[j] << endl;
-//            }
-//            foutCFG.close();
-
+            mixPoscar.head = listChemTypes[k].head + string(" # # # # # # # ") + mixPoscar.head;
+            mixPoscar.setChemicals(listChemTypes[k].types, allElementNames);
+            
+            ID = to_string(k) + string("___") + ID;
+            
+            Cfg cfg;
+            cfg = getCfgFromPoscar(ID, mixPoscar);
+            
+         }
+         
+         
+         if (m == 2)
+            return 0;
+         m++;
+         
 
          
       }
-      
-//         if ( ((nA == 3)&&(nB == 1)) || ((nA == 1)&&(nB == 3)) )
-//         {
-//            cout << prototypeName << endl;
-//            lines = getPoscar(nElements, prototypeName);
-//         }
-         
-      
-      
       
       
    }

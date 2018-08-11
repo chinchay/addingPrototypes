@@ -19,6 +19,29 @@
 using namespace std;
 
 /**************************************************************************************
+ * CFG : OPERATOR OVERLOADING = (ASSIGNMENT)
+ *************************************************************************************/
+Cfg &Cfg::operator = (const Cfg &rhs)
+{
+   head1 = rhs.head1;
+   head2 = rhs.head2;
+   head3 = rhs.head3;
+   head4 = rhs.head4;
+   featureID = rhs.featureID;
+   tail = rhs.tail;
+   ID = rhs.ID;
+   vfA = rhs.vfA;
+   vfB = rhs.vfB;
+   vfC = rhs.vfC;
+   vComposition = rhs.vComposition;
+
+   for (int i = 0; i < rhs.atoms.size(); i++)
+      atoms.push_back( Atom(rhs.atoms[i]) );
+
+   return *this;
+}
+
+/**************************************************************************************
  * CFG : NON-DEFAULT CONSTRUCTOR WITH ID, POSCAR
  * Initialize Cfg with ID and Poscar objects
  *************************************************************************************/
@@ -39,53 +62,6 @@ Cfg::Cfg(string ID, Poscar poscar)
 }
 
 /**************************************************************************************
- * CFG : PUSH_ATOM
- * Creates an object of Atom class using chemType and position. Push it into pAtoms.
- *************************************************************************************/
-void Cfg::push_atom(char chemType, VectT<float> position)
-{
-   Atom* pAtom = new Atom;
-   pAtom->setPosition(position);
-   pAtom->setChem(chemType);
-   
-   this->pAtoms.push_back(pAtom);
-}
-
-/**************************************************************************************
- * CFG : GETCFGLINES
- * Creates a vector of strings to be the content of a *.cfg file.
- *************************************************************************************/
-vector<string> Cfg::getCfgLines() //vector<string>
-{
-   vector<string> cfgLines;
-   
-   cfgLines.push_back(head1);
-   
-   cfgLines.push_back(head2);
-   int nAtoms = pAtoms.size();
-   cfgLines.push_back(string("    ") + to_string(nAtoms));
-   
-   cfgLines.push_back(head3);
-   cfgLines.push_back( vfA.getStringFromVectT() );
-   cfgLines.push_back( vfB.getStringFromVectT() );
-   cfgLines.push_back( vfC.getStringFromVectT() );
-   
-   cfgLines.push_back(head4);
-   for (int i = 0; i < nAtoms; i++)
-   {
-      Atom* pAtom = pAtoms[i];
-      string atomLine = getAtomLine(i, pAtom);
-      cfgLines.push_back(atomLine);
-   }
-   
-   string lineID = featureID + ID;
-   cfgLines.push_back(lineID);
-   cfgLines.push_back(tail);
-   
-   return cfgLines;
-}
-
-/**************************************************************************************
  * CFG : GETCFGFROMPOSCARCLASS
  *
  *************************************************************************************/
@@ -96,31 +72,39 @@ void Cfg::getCfgFromPoscarClass(string ID, Poscar poscar)
    this->vfB = poscar.vfB;
    this->vfC = poscar.vfC;
    this->vComposition = poscar.vComposition;
-   this->pAtoms = poscar.pAtoms;
+   this->atoms = poscar.atoms; // it is not necessary to make atoms.clear() it's empty?
 }
 
 /**************************************************************************************
- * CFG : GETATOMLINE
+ * CFG : OPERATOR OVERLOADING <<
  *
  *************************************************************************************/
-string Cfg::getAtomLine(int cont, Atom* pAtom)
+ostream &operator << (ostream &out, Cfg &cfg)
 {
-   string atomLine;
-   atomLine = string("             ");
-   atomLine += to_string(cont);
-   atomLine += string("    ");
+   cout.setf(ios::fixed);
+   cout.setf(ios::showpoint);
+   cout.precision(8);
    
-   int chemType = pAtom->getChem(); // it could be 0, 1, 2, ...
-   atomLine += to_string(chemType);
-   atomLine += string("     ");
+   out << cfg.head1 << endl;
+   out << cfg.head2 << endl;
+   out << "    " << cfg.atoms.size() << endl;
+   out << cfg.head3 << endl;
+   out << cfg.vfA << endl;
+   out << cfg.vfB << endl;
+   out << cfg.vfC << endl;
+   out << cfg.head4 << endl;
    
-   VectT<float> position = pAtom->getPosition();
-   atomLine += position.getStringFromVectT();
+   for (int i = 0; i < cfg.atoms.size(); i++)
+   {
+      out << setw(16) << i << setw(5) << cfg.atoms[i].getChemType() << " ";
+      out << cfg.atoms[i].getPosition() << endl;      
+   }
    
-   return atomLine;
+   out << cfg.featureID << cfg.ID << endl;
+   out << cfg.tail << endl;
+   
+   return out;
 }
 
-void Cfg::display()
-{
-   cout << "hello" << endl;
-}
+
+

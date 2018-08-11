@@ -18,6 +18,26 @@
 using namespace std;
 
 /**************************************************************************************
+ * POSCAR : OPERATOR OVERLOADING = (ASSIGNMENT)
+ *************************************************************************************/
+Poscar &Poscar::operator = (const Poscar &rhs)
+{
+   head = rhs.head;
+   scale = rhs.scale;
+   vfA = rhs.vfA;
+   vfB = rhs.vfB;
+   vfC = rhs.vfC;
+   vComposition = rhs.vComposition;
+   coordinatesType = rhs.coordinatesType;
+   
+   atoms.clear(); // delete all elements if they were defined previously!
+   for (int i = 0; i < rhs.atoms.size(); i++)
+      atoms.push_back(rhs.atoms[i]);
+
+   return *this;
+}
+
+/**************************************************************************************
  * POSCAR : GETPOSCARFROMFILE
  * This functions reads a POSCAR file and saves it into a Poscar class.
  *************************************************************************************/
@@ -69,12 +89,8 @@ void Poscar::getPoscarFromFile(string fileName)
             default:
                VectT<float> position;
                buffer >> position;
-               chemType = getTypeChem(j, vComposition);
-               
-               Atom* pAtom = new Atom;
-               pAtom->setPosition(position);
-               pAtom->setChem(chemType);
-               pAtoms.push_back(pAtom);
+               chemType = getChemTypeForAnAtom(j); // to initialize
+               atoms.push_back( Atom( position, chemType, to_string(chemType) ) );
                j++;
                break;
          }
@@ -86,60 +102,25 @@ void Poscar::getPoscarFromFile(string fileName)
 }
    
 /**************************************************************************************
- * POSCAR : GETPOSCALINES
- * This function convert a Poscar object into strings lines, so that the lines can then
- * be pasted into into a POSCAR file.
- *************************************************************************************/
-vector<string> Poscar::getPoscarLines()
-{
-   string s;
-   if (coordinatesType == 'c')
-      s = "C";
-   else if (coordinatesType == 'd')
-      s = "D";
-   
-   vector<string> poscarLines;
-   poscarLines.push_back(head);
-   poscarLines.push_back(to_string(scale));
-   poscarLines.push_back(vfA.getStringFromVectT());
-   poscarLines.push_back(vfB.getStringFromVectT());
-   poscarLines.push_back(vfC.getStringFromVectT());
-   poscarLines.push_back(vComposition.getStringFromVectT());
-   poscarLines.push_back(s);
-   
-   int nAtoms = pAtoms.size();
-   VectT<float> position;
-   for (int i = 0; i < nAtoms; i++)
-   {
-      position = pAtoms[i]->getPosition();
-      poscarLines.push_back(position.getStringFromVectT());
-   }
-   
-   return poscarLines;
-}
-
-/**************************************************************************************
  * POSCAR : CONVERTTOCARTESIAN
  * This function scales the lattice vectors by the parameter `scale`, and then gets
  * the position of each atom in cartesian coordinates by taking the fractional
- * coordinates saved in pAtoms[i], for i = 1,2,..., numberOfAtoms.
+ * coordinates saved in atoms[i], for i = 1,2,..., numberOfAtoms.
  *************************************************************************************/
 void Poscar::convertToCartesian(float scale = 1.0)
 {
    // scale the lattice coordinates, and get them in cartesian coordinates:
    latticeVectorsToCartesian(scale);
-   
-   if ( tolower(this->coordinatesType) == 'd')
+   if ( getCoordType() == string("Direct") )
    {
-      VectT<float> position;
-      for (int i = 0; i < pAtoms.size(); i++)
-      {
-         position = pAtoms[i]->getPosition();
-         position = getCartesianFromFractional(position);
-         pAtoms[i]->setPosition(position); // update into pAtoms.
-      }
+      for (int i = 0; i < atoms.size(); i++)
+         atoms[i].setPosition( getCartFromFract( atoms[i].getPosition() ) );
+      
+      // we have moved everything to cartesian system, so:
+      this->coordinatesType = 'c';
+      this->scale = 1.0;
    }
-   else if ( tolower(this->coordinatesType) == 'c')
+   else if ( getCoordType() == string("Cartesian") )
    {
       // position = position
    }
@@ -148,9 +129,6 @@ void Poscar::convertToCartesian(float scale = 1.0)
       cout << "PROBLEM. WHAT TYPE OF COORDINATES IS THIS? " << coordinatesType;
       cout << endl;
    }
-   // we have moved everything to cartesian system, so:
-   this->coordinatesType = 'c';
-   this->scale = 1.0;
 }
 
 /**************************************************************************************
@@ -165,42 +143,111 @@ void Poscar::latticeVectorsToCartesian(float scale)
 }
 
 /**************************************************************************************
- * POSCAR : GETCARTESIANFROMFRACTIONAL
+ * POSCAR : GETCARTFROMFRACT
  * Just convert fractional to cartesian coordinates, using the lattice vectors.
  *************************************************************************************/
-VectT<float> Poscar::getCartesianFromFractional(VectT<float> fractional)
+VectT<float> Poscar::getCartFromFract(VectT<float> fractional)
 {
    return fractional[0] * vfA  +  fractional[1] * vfB  +  fractional[2] * vfC;
 }
 
 /**************************************************************************************
- * POSCAR : GETTYPECHEM
- * This functions assign an integer to a chemical element.
+ * POSCAR : GETCOORDTYPE
+ *
  *************************************************************************************/
-int Poscar::getTypeChem(int cont, VectT<int> vComposition)
+string Poscar::getCoordType()
 {
-   int nChems = vComposition.size();
-   int nAtomsOfTheSameChemType;
+   if (tolower(coordinatesType) == 'c')
+      return string("Cartesian");
+   else if (tolower(coordinatesType) == 'd')
+      return string("Direct");
+   else
+      return string("ERROR_COORDINATES????");
+}
+
+/**************************************************************************************
+ * POSCAR : GETCHEMTYPEFORANATOM
+ *
+ *************************************************************************************/
+int Poscar::getChemTypeForAnAtom(int i)
+{
+   if (chemTypesPerAtom.size() == 0)
+   {
+      VectT<int> chemTypes;
+      for (int i = 0; i < vComposition.size(); i++)
+         chemTypes.push_back(i);
+      this->chemTypesPerAtom = getChemPerAtom(chemTypes);
+   }
+   return this->chemTypesPerAtom[i];
    
-   int k = 0;
-   int chemType = 0;
+}
+
+/**************************************************************************************
+ * POSCAR : SETCHEMICALS
+ *
+ *************************************************************************************/
+void Poscar::setChemicals(VectT<int> chemTypes, VectT<string> chemNames)
+{
+   this->chemTypes = chemTypes;
+   this->chemNames = chemNames;
+   
+   // Erase here because they were defined previously by default.
+   chemTypesPerAtom.clear();
+   chemNamesPerAtom.clear();
+   
+   this->chemTypesPerAtom = getChemPerAtom(chemTypes);
+   this->chemNamesPerAtom = getChemPerAtom(chemNames);
+
+   for (int i = 0; i < atoms.size(); i++)
+   {
+      atoms[i].setChemType( chemTypesPerAtom[i] );
+      atoms[i].setChemName( chemNamesPerAtom[i] );
+   }
+}
+
+/**************************************************************************************
+ * POSCAR : GETCHEMPERATOM
+ *
+ *************************************************************************************/
+template <class T>
+VectT<T> Poscar::getChemPerAtom(VectT<T> vecOfChems)
+{
+   int n_ary = vComposition.size();
+   int nAtomsOfTheSameChemType;
+   VectT<T> chemPerAtom;
+   
    // I put char chemType = 'A' previously, but '0' is more convenient
    // when working with *.cfg format later.
-   for (int i = 0; i < nChems; i++)
+   for (int i = 0; i < n_ary; i++)
    {
       nAtomsOfTheSameChemType = vComposition[i];
       for (int j = 0; j < nAtomsOfTheSameChemType; j++)
-      {
-         if (cont == k)
-            return chemType;
-         k++;
-      }
-      chemType++; // this will take values 0, 1, 2, ...
+         chemPerAtom.push_back(vecOfChems[i]);
    }
-   
-   // something must be wrong if reaching here! cont > sum(vCompostion)!!
-   chemType = -1;
-   return chemType;
+   return chemPerAtom;
 }
 
+/**************************************************************************************
+ * FRIEND OPERATOR OVERLOADING <<
+ * Have access to private members of poscar !!
+ *************************************************************************************/
+ostream &operator << (ostream &out, Poscar &poscar)
+{
+   cout.setf(ios::fixed);
+   cout.setf(ios::showpoint);
+   cout.precision(8);
+   
+   out << poscar.head << endl;
+   out << poscar.scale << endl;
+   out << poscar.vfA << endl;
+   out << poscar.vfB << endl;
+   out << poscar.vfC << endl;
+   for (int i = 0; i < poscar.vComposition.size(); i++)
+      out << poscar.vComposition[i] << " ";
+   out << endl;
+   out << poscar.getCoordType() << endl; //getCoordType is private, but << is friend!
 
+   for (int i = 0; i < poscar.atoms.size(); i++)
+      out << poscar.atoms[i].getPosition() << endl; // works with const !!! overload
+   return out;
+}

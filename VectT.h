@@ -32,6 +32,17 @@ public:
       *this = vectT;
    }
    
+//   VectT operator = (const VectT &rhs)
+//   {
+//      for (int i = 0; i < rhs.size(); i++)
+//      {
+//         VectT::push_back(rhs[i]);
+//      }
+//
+//      return *this;
+//   }
+   
+   
    /***********************************************************************************
     * VECTTH : OPERATOR OVERLOADING *=
     * Allows multiplication unto a VectT by a float factor number.
@@ -141,6 +152,18 @@ public:
    }
    
    /***********************************************************************************
+    * VECTTH : OPERATOR OVERLOADING <<
+    **********************************************************************************/
+   friend ostream &operator << (ostream &out, const VectT &vectT) // const!! or error
+   {
+      for (int i = 0; i < vectT.size(); i++)
+      {
+         out << setw(14) << vectT[i];
+      }
+      return out;
+   }
+   
+   /***********************************************************************************
     * VECTTH : OPERATOR OVERLOADING *
     * Multiplies a float and a VectT object.
     **********************************************************************************/
@@ -175,6 +198,22 @@ public:
       return dotProduct;
    }
    
+   /***********************************************************************************
+    * VECTTH : GETSUMCOMPONENTS
+    * Calculates the sum of the elements of VectT
+    **********************************************************************************/
+   float getSumComponents()
+   {
+      typename VectT::iterator it;
+      
+      typename vector<T>::iterator itBegin  = vector<T>::begin();
+      typename vector<T>::iterator itEnd  = vector<T>::end();
+      
+      float sum = 0;
+      for (it = itBegin; it != itEnd; it++)
+         sum += (*it);
+      return sum;
+   }
 };
 
 #endif /* VectT_h */
