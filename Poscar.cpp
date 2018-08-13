@@ -251,3 +251,28 @@ ostream &operator << (ostream &out, Poscar &poscar)
       out << poscar.atoms[i].getPosition() << endl; // works with const !!! overload
    return out;
 }
+
+/**************************************************************************************
+ * FRIEND OPERATOR OVERLOADING << FOR SAVING INTO FILES
+ * Have access to private members of poscar !!
+ *************************************************************************************/
+ofstream &operator << (ofstream &fout, Poscar &poscar)
+{
+   fout.setf(ios::fixed);
+   fout.setf(ios::showpoint);
+   fout.precision(8);
+   
+   fout << poscar.head << endl;
+   fout << poscar.scale << endl;
+   fout << poscar.vfA << endl;
+   fout << poscar.vfB << endl;
+   fout << poscar.vfC << endl;
+   for (int i = 0; i < poscar.vComposition.size(); i++)
+      fout << poscar.vComposition[i] << " ";
+   fout << endl;
+   fout << poscar.getCoordType() << endl; //getCoordType is private, but << is friend!
+   
+   for (int i = 0; i < poscar.atoms.size(); i++)
+      fout << poscar.atoms[i].getPosition() << endl; // works with const !!! overload
+   return fout;
+}

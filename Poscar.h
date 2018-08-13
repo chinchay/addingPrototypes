@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
 #include <vector>
 #include <iomanip>
 
@@ -53,6 +54,7 @@ public:
    void setChemicals(VectT<int> chemTypes, VectT<string> chemNames);
    
    friend ostream &operator << (ostream &out, Poscar &poscar);
+   friend ofstream &operator << (ofstream &fout, Poscar &poscar);
 
 };
 

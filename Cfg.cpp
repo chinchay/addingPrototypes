@@ -106,5 +106,36 @@ ostream &operator << (ostream &out, Cfg &cfg)
    return out;
 }
 
+/**************************************************************************************
+ * CFG : OPERATOR OVERLOADING << FOR SAVING INTO A FILE
+ *
+ *************************************************************************************/
+ofstream &operator << (ofstream &fout, Cfg &cfg)
+{
+   fout.setf(ios::fixed);
+   fout.setf(ios::showpoint);
+   fout.precision(8);
+   
+   fout << cfg.head1 << endl;
+   fout << cfg.head2 << endl;
+   fout << "    " << cfg.atoms.size() << endl;
+   fout << cfg.head3 << endl;
+   fout << cfg.vfA << endl;
+   fout << cfg.vfB << endl;
+   fout << cfg.vfC << endl;
+   fout << cfg.head4 << endl;
+   
+   for (int i = 0; i < cfg.atoms.size(); i++)
+   {
+      fout << setw(16) << i << setw(5) << cfg.atoms[i].getChemType() << " ";
+      fout << cfg.atoms[i].getPosition() << endl;
+   }
+   
+   fout << cfg.featureID << cfg.ID << endl;
+   fout << cfg.tail << endl;
+   
+   return fout;
+}
+
 
 

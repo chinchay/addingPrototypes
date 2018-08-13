@@ -180,10 +180,19 @@ Cfg getCfgFromPoscar(string ID, Poscar poscar)
    
    Cfg cfg(ID, poscar);
    
-   cout << poscar << endl;
-   cout << cfg << endl;
+//   cout << poscar << endl;
+//   cout << cfg << endl;
    
    return cfg;
+}
+
+string remove_extension(const string& filename)
+{
+   // from
+   // stackoverflow.com/questions/6417817/easy-way-to-remove-extension-from-a-filename
+   size_t lastdot = filename.find_last_of(".");
+   if (lastdot == string::npos) return filename;
+   return filename.substr(0, lastdot);
 }
 
 /**************************************************************************************
@@ -218,8 +227,8 @@ int main()
       
       Poscar prototypePoscar(prototypeName);
       VectT<float> pos = prototypePoscar.atoms[0].getPosition();
-      cout << i << endl;
-      cout << "position = " <<pos << endl;
+//      cout << i << endl;
+//      cout << "position = " <<pos << endl;
       
       
       vComposition = prototypePoscar.vComposition;
@@ -230,17 +239,18 @@ int main()
       if (nAtoms < 11)
       {
          cout << prototypeName << endl;
-         ID = prototypeName;
+//         ID = prototypeName;
          
-         cout << "COMIENZO..." << endl;
-         cout << prototypePoscar << endl;
+//         cout << "COMIENZO..." << endl;
+//         cout << prototypePoscar << endl;
          
 //         n_ary = 3;
          VectT<ChemicalTypes> listChemTypes = getVectMixChemTypes(allElementNames, n_ary);
-         cout << "________________________________________________________" << endl;
+//         cout << "________________________________________________________" << endl;
+
          for (int k = 0; k < listChemTypes.size(); k++)
          {
-            cout << listChemTypes[k].types << " >>>> " << listChemTypes[k].head << endl << endl;
+//            cout << listChemTypes[k].types << " >>>> " << listChemTypes[k].head << endl << endl;
             
             // here COPY CONSTRUCTOR is used!!! but not uses directly the =operator !!
             // equivalent to: mixPoscar(prototypePoscar)
@@ -249,27 +259,35 @@ int main()
             mixPoscar.head = listChemTypes[k].head + string(" # # # # # # # ") + mixPoscar.head;
             mixPoscar.setChemicals(listChemTypes[k].types, allElementNames);
             
-            ID = to_string(k) + string("___") + ID;
+            ID = to_string(k) + string("___") + remove_extension(prototypeName);
             
             Cfg cfg;
             cfg = getCfgFromPoscar(ID, mixPoscar);
             
+            string newNamePoscar = string("POSCAR_") + ID;
+            string nameCfgFile = ID + (".cfg");
+            
+            ofstream fout(newNamePoscar.c_str());
+            fout << mixPoscar;
+            fout.close();
+            
+            string fileNameCfg = ID + string(".cfg");
+            ofstream foutCfg(fileNameCfg.c_str());
+            foutCfg << cfg << endl;
+            foutCfg.close();
+            
+            
          }
+                  
+//         if (m == 2)
+//            return 0;
          
-         
-         if (m == 2)
-            return 0;
          m++;
          
-
-         
       }
-      
-      
    }
    fin.close();
-   
-   
+
    return 0;
 }
 

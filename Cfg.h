@@ -59,6 +59,7 @@ public:
    void getCfgFromPoscarClass(string ID, Poscar poscar);
    
    friend ostream &operator << (ostream &out, Cfg &cfg);
+   friend ofstream &operator << (ofstream &fout, Cfg &cfg);
 
 };
 
